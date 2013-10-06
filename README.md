@@ -29,15 +29,25 @@ You can also start a unoconv listener to avoid launching Libre/OpenOffice on eve
 
 ## API
 
-### unoconv.convert(file, outputFormat, [options], callback)
+### unoconv.convert(file, [options], callback)
 
 Converts `file` to the specified `outputFormat`. `options` is an object with the following properties:
 
 * `bin` Path to the unoconv binary
 * `port` Unoconv listener port to connect to
+* `outputFormat` The format to convert to; defaults to `csv`
+* `sheet` The sheet to convert
 
 `callback` gets the arguments `err` and `result`. `result` is returned as a Buffer object.
 
+### unoconv.getSheets(file, outputFormat, [options], callback)
+
+Retrieves the list of sheets contained in the `file`.
+
+* `bin` Path to the unoconv binary
+* `port` Unoconv listener port to connect to
+
+`callback` gets the arguments `err` and `result`. `result` is returned as a Buffer object.
 
 ### unoconv.listen([options])
 

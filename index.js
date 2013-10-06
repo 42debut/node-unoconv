@@ -6,52 +6,35 @@ var _ = require('underscore'),
 
 var unoconv = exports = module.exports = {};
 
-/**
-* Convert a document.
-*
-* @param {String} file
-* @param {String} outputFormat
-* @param {Object|Function} options
-* @param {Function} callback
-* @api public
-*/
-unoconv.convert = function(file, outputFormat, options, callback) {
-    var self = this,
-        args,
-        bin = 'unoconv',
-        child,
+
+var spawn = function(file, args, options, callback) {
+    var child,
         stdout = [],
         stderr = [];
 
-    if (_.isFunction(options)) {
-        callback = options;
-        options = null;
+    if (options.exportFilters) {
+        args.unshift('FilterOptions=' + options.exportFilters);
+        args.unshift('-e');
     }
 
-    args = [
-        '-f' + outputFormat,
-        '--stdout'
-    ];
+    if (_.isFunction(options)) {
+        callback = options;
+        options = {};
+    }
 
-    if (options && options.port) {
-        args.push('-p' + options.port)
+    if (options.port) {
+        args.push('-p' + options.port);
     }
 
     args.push(file);
 
-    if (options && options.bin) {
-        bin = options.bin;
-    }
-
-    child = childProcess.spawn(bin, args, function (err, stdout, stderr) {
+    child = childProcess.spawn((options.bin || './bin/unoconv'), args, function (err, stdout, stderr) {
         if (err) {
             return callback(err);
         }
-
         if (stderr) {
             return callback(new Error(stderr.toString()));
         }
-
         callback(null, stdout);
     });
 
@@ -67,8 +50,48 @@ unoconv.convert = function(file, outputFormat, options, callback) {
         if (stderr.length) {
             return callback(new Error(Buffer.concat(stderr).toString()));
         }
-
         callback(null, Buffer.concat(stdout));
+    });
+}
+
+
+/**
+* Convert a document.
+*
+* @param {String} file
+* @param {String} outputFormat
+* @param {Object|Function} options
+* @param {Function} callback
+* @api public
+*/
+unoconv.convert = function(file, options, callback) {
+    var options = options || {};
+    var args = [];
+
+    if (options.sheet) {
+        args.push('--sheet=' + options.sheet + '');
+    }
+
+    args.push('-f');
+    args.push(options.outputFormat || 'csv');
+    args.push('--stdout');
+
+    return spawn(file, args, options, callback);
+};
+
+/**
+*
+*
+*/
+unoconv.getSheets = function(file, options, callback) {
+    var args = [
+        '--show-sheet-names'
+    ];
+    return spawn(file, args, options, function(err, buffer) {
+        if (err) return callback(err);
+        return callback(null, buffer.toString()
+                                    .split('\n')
+                                    .filter(function(line) { return line.length > 0; }));
     });
 };
 
