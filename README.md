@@ -16,8 +16,8 @@ Install with:
 
 	var unoconv = require('unoconv');
 
-	unoconv.convert('document.docx', 'pdf', function (err, result) {
-		// result is returned as a Buffer
+	unoconv.convert('document.docx').then(function (result) {
+		// `result` is a `Buffer` object
 		fs.writeFile('converted.pdf', result);
 	});
 
@@ -29,7 +29,7 @@ You can also start a unoconv listener to avoid launching Libre/OpenOffice on eve
 
 ## API
 
-### unoconv.convert(file, [options], callback)
+### unoconv.convert(file, [options])
 
 Converts `file` to the specified `outputFormat`. `options` is an object with the following properties:
 
@@ -40,7 +40,7 @@ Converts `file` to the specified `outputFormat`. `options` is an object with the
 
 `callback` gets the arguments `err` and `result`. `result` is returned as a Buffer object.
 
-### unoconv.getSheets(file, [options], callback)
+### unoconv.getSheets(file, [options])
 
 Retrieves the list of sheets contained in the `file`.
 
@@ -60,14 +60,3 @@ Returns a `ChildProcess` object. You can handle errors by listening to the `stde
 	listener.stderr.on('data', function (data) {
 		console.log('stderr: ' + data.toString('utf8'));
 	});
-
-### unoconv.detectSupportedFormats([options], callback)
-
-This function parses the output of `unoconv --show` to attempt to detect supported output formats.
-
-`options` is an object with the following properties:
-
-* `bin` Path to the unoconv binary
-
-`callback` gets the arguments `err` and `result`. `result` is an object containing a collection of supported document types and output formats.
-

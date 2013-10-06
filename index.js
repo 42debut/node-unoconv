@@ -2,15 +2,17 @@
 
 var _ = require('underscore'),
     childProcess = require('child_process'),
-    mime = require('mime');
+    mime = require('mime'),
+    Q = require('q');
 
 var unoconv = exports = module.exports = {};
 
 
-var spawn = function(file, args, options, callback) {
+var spawn = function(file, args, options) {
     var child,
         stdout = [],
-        stderr = [];
+        stderr = [],
+        deferred = Q.defer();
 
     if (options.exportFilters) {
         args.unshift('FilterOptions=' + options.exportFilters);
@@ -30,12 +32,12 @@ var spawn = function(file, args, options, callback) {
 
     child = childProcess.spawn((options.bin || './bin/unoconv'), args, function (err, stdout, stderr) {
         if (err) {
-            return callback(err);
+            deferred.reject(err);
         }
         if (stderr) {
-            return callback(new Error(stderr.toString()));
+            deferred.reject(new Error(stderr.toString()));
         }
-        callback(null, stdout);
+        deferred.resolve(stdout);
     });
 
     child.stdout.on('data', function (data) {
@@ -48,10 +50,12 @@ var spawn = function(file, args, options, callback) {
 
     child.on('exit', function () {
         if (stderr.length) {
-            return callback(new Error(Buffer.concat(stderr).toString()));
+            return deferred.reject(new Error(Buffer.concat(stderr).toString()));
         }
-        callback(null, Buffer.concat(stdout));
+        deferred.resolve(Buffer.concat(stdout));
     });
+
+    return deferred.promise;
 }
 
 
@@ -61,10 +65,9 @@ var spawn = function(file, args, options, callback) {
 * @param {String} file
 * @param {String} outputFormat
 * @param {Object|Function} options
-* @param {Function} callback
 * @api public
 */
-unoconv.convert = function(file, options, callback) {
+unoconv.convert = function(file, options) {
     var options = options || {};
     var args = [];
 
@@ -76,22 +79,21 @@ unoconv.convert = function(file, options, callback) {
     args.push(options.outputFormat || 'csv');
     args.push('--stdout');
 
-    return spawn(file, args, options, callback);
+    return spawn(file, args, options);
 };
 
 /**
 *
 *
 */
-unoconv.getSheets = function(file, options, callback) {
+unoconv.getSheets = function(file, options) {
     var args = [
         '--show-sheet-names'
     ];
-    return spawn(file, args, options, function(err, buffer) {
-        if (err) return callback(err);
-        return callback(null, buffer.toString()
-                                    .split('\n')
-                                    .filter(function(line) { return line.length > 0; }));
+    return spawn(file, args, options).then(function(buffer) {
+        return buffer.toString().split('\n').filter(function(line) {
+            return line.length > 0;
+        });
     });
 };
 
@@ -103,9 +105,7 @@ unoconv.getSheets = function(file, options, callback) {
 * @api public
 */
 unoconv.listen = function (options) {
-    var self = this,
-        args,
-        bin = 'unoconv';
+    var bin = './bin/unoconv';
 
     args = [ '--listener' ];
 
@@ -118,88 +118,4 @@ unoconv.listen = function (options) {
     }
 
     return childProcess.spawn(bin, args);
-};
-
-/**
-* Detect supported conversion formats.
-*
-* @param {Object|Function} options
-* @param {Function} callback
-*/
-unoconv.detectSupportedFormats = function (options, callback) {
-    var self = this,
-        docType,
-        detectedFormats = {
-            document: [],
-            graphics: [],
-            presentation: [],
-            spreadsheet: []
-        },
-        bin = 'unoconv';
-
-    if (_.isFunction(options)) {
-        callback = options;
-        options = null;
-    }
-
-    if (options && options.bin) {
-        bin = options.bin;
-    }
-
-    childProcess.execFile(bin, [ '--show' ], function (err, stdout, stderr) {
-        if (err) {
-            return callback(err);
-        }
-
-        // For some reason --show outputs to stderr instead of stdout
-        var lines = stderr.split('\n');
-
-        lines.forEach(function (line) {
-            if (line === 'The following list of document formats are currently available:') {
-                docType = 'document';
-            } else if (line === 'The following list of graphics formats are currently available:') {
-                docType = 'graphics';
-            } else if (line === 'The following list of presentation formats are currently available:') {
-                docType = 'presentation';
-            } else if (line === 'The following list of spreadsheet formats are currently available:') {
-                docType = 'spreadsheet';
-            } else {
-                var format = line.match(/^(.*)-/);
-
-                if (format) {
-                    format = format[1].trim();
-                }
-
-                var extension = line.match(/\[(.*)\]/);
-
-                if (extension) {
-                    extension = extension[1].trim().replace('.', '');
-                }
-
-                var description = line.match(/-(.*)\[/);
-
-                if (description) {
-                    description = description[1].trim();
-                }
-
-                if (format && extension && description) {
-                    detectedFormats[docType].push({
-                        'format': format,
-                        'extension': extension,
-                        'description': description,
-                        'mime': mime.lookup(extension)
-                    });
-                }
-            }
-        });
-
-        if (detectedFormats.document.length < 1 &&
-            detectedFormats.graphics.length < 1 &&
-            detectedFormats.presentation.length < 1 &&
-            detectedFormats.spreadsheet.length < 1) {
-            return callback(new Error('Unable to detect supported formats'));
-        }
-
-        callback(null, detectedFormats);
-    });
 };
