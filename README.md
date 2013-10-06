@@ -1,10 +1,10 @@
 # node-unoconv
 
-A node.js wrapper for converting documents with [unoconv](http://dag.wieers.com/home-made/unoconv/).
+A node.js wrapper for converting documents with [unoconv](https://github.com/42debut/unoconv).
 
 ## Requirements
 
-[Unoconv](http://dag.wieers.com/home-made/unoconv/) is required, which requires [LibreOffice](http://www.libreoffice.org/) (or OpenOffice.)
+Our modified version of [Unoconv](https://github.com/42debut/unoconv) is required, which requires [LibreOffice](http://www.libreoffice.org/) (or OpenOffice.). It is included in this repo so you don't need to download it!
 
 ## Install
 
@@ -38,16 +38,12 @@ Converts `file` to the specified `outputFormat`. `options` is an object with the
 * `outputFormat` The format to convert to; defaults to `csv`
 * `sheet` The sheet to convert
 
-`callback` gets the arguments `err` and `result`. `result` is returned as a Buffer object.
-
 ### unoconv.getSheets(file, [options])
 
 Retrieves the list of sheets contained in the `file`.
 
 * `bin` Path to the unoconv binary
 * `port` Unoconv listener port to connect to
-
-`callback` gets the arguments `err` and `result`. `result` is returned as a Buffer object.
 
 ### unoconv.listen([options])
 
