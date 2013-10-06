@@ -40,7 +40,7 @@ Converts `file` to the specified `outputFormat`. `options` is an object with the
 
 `callback` gets the arguments `err` and `result`. `result` is returned as a Buffer object.
 
-### unoconv.getSheets(file, outputFormat, [options], callback)
+### unoconv.getSheets(file, [options], callback)
 
 Retrieves the list of sheets contained in the `file`.
 
